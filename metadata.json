@@ -1,0 +1,8 @@
+{
+  "name": "Gemini AI Form Coach",
+  "description": "A real-time biomechanics coach that uses MediaPipe for pose tracking and Gemini for expert form analysis and audio feedback.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
