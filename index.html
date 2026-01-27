@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OmniCoach Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MediaPipe dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         
@@ -29,6 +33,18 @@
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: rgba(16, 185, 129, 0.5);
+        }
+
+        /* Prevent potential layout shifts when camera starts */
+        video {
+          transform: rotateY(180deg);
+          -webkit-transform:rotateY(180deg);
+          -moz-transform:rotateY(180deg);
+        }
+        canvas {
+          transform: rotateY(180deg);
+          -webkit-transform:rotateY(180deg);
+          -moz-transform:rotateY(180deg);
         }
 
         ::selection {
