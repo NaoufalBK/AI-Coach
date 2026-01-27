@@ -35,6 +35,12 @@ export enum ExerciseType {
   CUSTOM = 'CUSTOM'
 }
 
+export interface SimulationState {
+  isGenerating: boolean;
+  videoUrl: string | null;
+  statusMessage: string;
+}
+
 export type MuscleGroup = 
   | 'Chest' | 'Back' | 'Quads' | 'Hamstrings' 
   | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs' | 'Glutes' | 'Calves' | 'Forearms';
