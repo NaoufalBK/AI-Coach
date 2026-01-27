@@ -45,11 +45,36 @@ export type MuscleGroup =
   | 'Chest' | 'Back' | 'Quads' | 'Hamstrings' 
   | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs' | 'Glutes' | 'Calves' | 'Forearms';
 
-export interface LoggedExercise {
-  name: string;
-  sets: number;
+export interface WorkoutSet {
+  id: string;
   reps: number;
-  weight?: number;
+  weight: number;
+  rpe?: number; // Rate of Perceived Exertion
+  completed: boolean;
+}
+
+export interface LoggedExercise {
+  id: string;
+  name: string;
+  type: ExerciseType;
+  sets: WorkoutSet[];
+  primaryMuscle?: MuscleGroup;
+}
+
+export interface RoutineExercise {
+  id: string;
+  name: string;
+  type: ExerciseType;
+  primaryMuscle?: MuscleGroup;
+  targetSets: number;
+  targetReps: number;
+}
+
+export interface Routine {
+  id: string;
+  name: string;
+  exercises: RoutineExercise[];
+  muscles: MuscleGroup[];
 }
 
 export interface WorkoutSession {
@@ -58,8 +83,9 @@ export interface WorkoutSession {
   title: string;
   exercises: LoggedExercise[];
   muscles: MuscleGroup[];
-  totalVolume?: number;
-  durationMinutes?: number;
+  totalVolume: number;
+  durationMinutes: number;
+  isAI?: boolean;
 }
 
-export type AppSection = 'dashboard' | 'new-session' | 'ai-coach' | 'settings';
+export type AppSection = 'dashboard' | 'new-session' | 'routines' | 'ai-coach' | 'analytics' | 'settings';
