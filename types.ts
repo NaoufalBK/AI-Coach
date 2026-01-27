@@ -31,20 +31,29 @@ export enum ExerciseType {
   PUSH_UP = 'PUSH_UP',
   PULL_UP = 'PULL_UP',
   KNEE_ELEVATION = 'KNEE_ELEVATION',
-  ROWING = 'ROWING'
+  ROWING = 'ROWING',
+  CUSTOM = 'CUSTOM'
 }
 
 export type MuscleGroup = 
   | 'Chest' | 'Back' | 'Quads' | 'Hamstrings' 
-  | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs' | 'Glutes';
+  | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs' | 'Glutes' | 'Calves' | 'Forearms';
+
+export interface LoggedExercise {
+  name: string;
+  sets: number;
+  reps: number;
+  weight?: number;
+}
 
 export interface WorkoutSession {
   id: string;
   date: Date;
-  exercise: ExerciseType;
-  reps: number;
+  title: string;
+  exercises: LoggedExercise[];
   muscles: MuscleGroup[];
-  avgScore: 'excellent' | 'warning' | 'critical';
+  totalVolume?: number;
+  durationMinutes?: number;
 }
 
-export type AppSection = 'coach' | 'nutrition' | 'history' | 'setup';
+export type AppSection = 'dashboard' | 'new-session' | 'ai-coach' | 'settings';
