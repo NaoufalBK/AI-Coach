@@ -4,7 +4,7 @@ import {
   Dumbbell, Zap, History, Settings, ChevronRight, Plus, Trophy, Activity, 
   Flame, Clock, BarChart3, Trash2, LayoutGrid, Utensils, RotateCcw,
   Calendar as CalendarIcon, ChevronLeft, User, CheckCircle2, Target, X, 
-  Minus, Star, Save, ArrowRight, ShieldCheck, Info
+  Minus, Star, Save, ArrowRight, ShieldCheck, Info, Sparkles
 } from 'lucide-react';
 import { 
   MuscleGroup, WorkoutSession, AppSection, LoggedExercise, 
@@ -16,7 +16,7 @@ import { analyzeBiomechanics, generateCoachSpeech, stopCoachSpeech } from './ser
 const App: React.FC = () => {
   const [activeSection, setActiveSection] = useState<AppSection>('dashboard');
   const [sessions, setSessions] = useState<WorkoutSession[]>(() => {
-    const saved = localStorage.getItem('omni_workouts_v5');
+    const saved = localStorage.getItem('omni_workouts_v6');
     return saved ? JSON.parse(saved).map((s: any) => ({ ...s, date: new Date(s.date) })) : [];
   });
 
@@ -48,13 +48,8 @@ const App: React.FC = () => {
   const [lastFeedback, setLastFeedback] = useState<CoachingFeedback | null>(null);
   const [currentAngles, setCurrentAngles] = useState<JointAngles | null>(null);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const hipHistoryRef = useRef<number[]>([]);
-  const autoStartTimerRef = useRef<number | null>(null);
-
   useEffect(() => {
-    localStorage.setItem('omni_workouts_v5', JSON.stringify(sessions));
+    localStorage.setItem('omni_workouts_v6', JSON.stringify(sessions));
   }, [sessions]);
 
   // Handle auto-start for AI Coach
@@ -76,12 +71,17 @@ const App: React.FC = () => {
       setIsPositioning(false);
       setIsAIActive(true);
       setCountdown(null);
-      generateCoachSpeech("Protocol started. Focus on execution.");
+      generateCoachSpeech("Protocol started. Form analysis engaged.");
     } else if (countdown !== null) {
       const t = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(t);
     }
   }, [countdown]);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hipHistoryRef = useRef<number[]>([]);
+  const autoStartTimerRef = useRef<number | null>(null);
 
   const toggleMuscle = (muscle: MuscleGroup) => {
     setNewWorkout(prev => {
@@ -134,7 +134,7 @@ const App: React.FC = () => {
       id: Date.now().toString(),
       date: new Date(),
       title: newWorkout.title || "Elite Session",
-      exercises: newWorkout.exercises.filter(ex => ex.name),
+      exercises: newWorkout.exercises.filter(ex => ex.name.trim() !== ''),
       muscles: Array.from(newWorkout.muscles),
       totalVolume: vol,
       isFavorite: newWorkout.isFavorite
@@ -186,8 +186,8 @@ const App: React.FC = () => {
       if (isAIActive) {
         const mediapipeGlobal = (window as any);
         if (mediapipeGlobal.drawConnectors) {
-          mediapipeGlobal.drawConnectors(ctx, landmarks, mediapipeGlobal.POSE_CONNECTIONS, { color: 'rgba(16, 185, 129, 0.6)', lineWidth: 4 });
-          mediapipeGlobal.drawLandmarks(ctx, landmarks, { color: '#ffffff', lineWidth: 1, radius: 2 });
+          mediapipeGlobal.drawConnectors(ctx, landmarks, mediapipeGlobal.POSE_CONNECTIONS, { color: 'rgba(16, 185, 129, 0.7)', lineWidth: 5 });
+          mediapipeGlobal.drawLandmarks(ctx, landmarks, { color: '#ffffff', lineWidth: 1, radius: 3 });
         }
         const hipY = (landmarks[23].y + landmarks[24].y) / 2;
         hipHistoryRef.current.push(hipY);
@@ -223,20 +223,21 @@ const App: React.FC = () => {
   }, [activeSection, processPose]);
 
   const endSession = () => {
+    stopCoachSpeech();
     setIsAIActive(false);
     setIsPositioning(false);
     setRepCount(0);
-    stopCoachSpeech();
+    setLastFeedback(null);
   };
 
   return (
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans">
       <nav className="w-20 bg-zinc-950 border-r border-white/5 flex flex-col items-center py-10 gap-8 z-50">
         <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-black shadow-lg shadow-emerald-500/20 mb-4 animate-pulse"><Zap className="w-7 h-7" /></div>
-        <NavButton icon={<LayoutGrid />} active={activeSection === 'dashboard'} onClick={() => setActiveSection('dashboard')} />
-        <NavButton icon={<CalendarIcon />} active={activeSection === 'history'} onClick={() => setActiveSection('history')} />
+        <NavButton icon={<LayoutGrid />} active={activeSection === 'dashboard'} onClick={() => { setActiveSection('dashboard'); stopCoachSpeech(); }} />
+        <NavButton icon={<CalendarIcon />} active={activeSection === 'history'} onClick={() => { setActiveSection('history'); stopCoachSpeech(); }} />
         <NavButton icon={<Activity />} active={activeSection === 'ai-coach'} onClick={() => setActiveSection('ai-coach')} />
-        <NavButton icon={<Utensils />} active={activeSection === 'nutrition'} onClick={() => setActiveSection('nutrition')} />
+        <NavButton icon={<Utensils />} active={activeSection === 'nutrition'} onClick={() => { setActiveSection('nutrition'); stopCoachSpeech(); }} />
         <NavButton icon={<Settings />} active={false} onClick={() => {}} className="mt-auto opacity-30" />
       </nav>
 
@@ -246,35 +247,36 @@ const App: React.FC = () => {
           <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-blue-500/10 blur-[120px] rounded-full" />
         </div>
 
+        {/* Dashboard */}
         {activeSection === 'dashboard' && (
           <div className="p-12 max-w-7xl mx-auto space-y-16 animate-in fade-in duration-700">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div className="space-y-4">
-                <h1 className="text-7xl font-black italic uppercase tracking-tighter leading-none">THE <span className="text-emerald-500">ENGINE</span></h1>
-                <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.5em]">Central Biometric Core</p>
+                <h1 className="text-7xl font-black italic uppercase tracking-tighter leading-none">THE <span className="text-emerald-500">CORE</span></h1>
+                <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.5em]">Biometric Performance Center</p>
               </div>
               <button onClick={() => setActiveSection('new-workout')} className="group flex items-center gap-4 px-12 py-6 bg-emerald-500 text-black rounded-[2rem] font-black uppercase italic tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-emerald-500/20">
-                <Plus className="w-6 h-6" /> Start New Protocol
+                <Plus className="w-6 h-6" /> Log Training Protocol
               </button>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <SummaryCard label="Sessions" value={sessions.length.toString()} icon={<Flame className="text-orange-500" />} />
-              <SummaryCard label="Weekly Volume" value={`${(sessions.reduce((acc, s) => acc + s.totalVolume, 0) / 1000).toFixed(1)}k`} icon={<BarChart3 className="text-emerald-500" />} />
-              <SummaryCard label="Streak" value="5" icon={<Zap className="text-blue-500" />} />
-              <SummaryCard label="Tier" value="Elite" icon={<Trophy className="text-yellow-500" />} />
+              <SummaryCard label="Volume" value={`${(sessions.reduce((acc, s) => acc + s.totalVolume, 0) / 1000).toFixed(1)}k`} icon={<BarChart3 className="text-emerald-500" />} />
+              <SummaryCard label="Bio-Metrics" value="8" icon={<Activity className="text-blue-500" />} />
+              <SummaryCard label="Efficiency" value="Master" icon={<Sparkles className="text-yellow-500" />} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-              <div className="lg:col-span-8 bg-zinc-900/30 border border-white/5 p-12 rounded-[3.5rem] backdrop-blur-xl">
-                <h2 className="text-3xl font-black italic uppercase tracking-tight mb-10 flex items-center gap-4"><History className="w-7 h-7 text-emerald-500" /> Recent Sessions</h2>
+              <div className="lg:col-span-8 bg-zinc-900/30 border border-white/5 p-12 rounded-[4rem] backdrop-blur-xl">
+                <h2 className="text-3xl font-black italic uppercase mb-10 flex items-center gap-4"><History className="w-7 h-7 text-emerald-500" /> Biometric History</h2>
                 <div className="space-y-6">
                   {sessions.slice(0, 4).map(s => (
-                    <div key={s.id} className="bg-zinc-900/50 border border-white/5 p-8 rounded-[2.5rem] flex items-center justify-between group hover:border-emerald-500/30 transition-all cursor-pointer">
+                    <div key={s.id} className="bg-zinc-900/50 border border-white/5 p-8 rounded-[3rem] flex items-center justify-between group hover:border-emerald-500/30 transition-all cursor-pointer">
                       <div className="flex items-center gap-8">
                         <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center group-hover:bg-emerald-500/10 transition-colors"><Dumbbell className="w-8 h-8 text-zinc-500 group-hover:text-emerald-500" /></div>
                         <div>
-                          <h3 className="text-2xl font-black italic uppercase mb-2">{s.title}</h3>
+                          <h3 className="text-2xl font-black italic uppercase leading-none mb-2">{s.title}</h3>
                           <div className="flex flex-wrap gap-2">
                              {s.muscles.map(m => <span key={m} className="text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-md">{m}</span>)}
                           </div>
@@ -282,43 +284,268 @@ const App: React.FC = () => {
                       </div>
                       <div className="text-right">
                          <p className="text-3xl font-black italic text-emerald-400 tabular-nums">{s.totalVolume.toLocaleString()}</p>
-                         <p className="text-[10px] font-black uppercase text-zinc-600">KG VOLUME</p>
+                         <p className="text-[10px] font-black uppercase text-zinc-600">KG LOAD</p>
                       </div>
                     </div>
                   ))}
-                  {sessions.length === 0 && <div className="py-20 text-center text-zinc-700 border border-dashed border-white/10 rounded-[3rem]">System awaiting initial training data.</div>}
+                  {sessions.length === 0 && <div className="py-24 text-center text-zinc-800 border-2 border-dashed border-white/5 rounded-[4rem]">Awaiting initial biometric input stream.</div>}
                 </div>
               </div>
-              <div className="lg:col-span-4 bg-zinc-900/30 border border-white/5 p-12 rounded-[3.5rem] backdrop-blur-xl space-y-8">
-                 <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">AI TARGETING</h3>
-                 <div className="space-y-6">
-                    <div className="p-8 bg-emerald-500 rounded-[2.5rem] text-black">
-                       <Target className="w-12 h-12 mb-6" />
-                       <p className="text-2xl font-black italic uppercase leading-none">Volume Surge</p>
-                       <p className="text-xs font-medium opacity-70 mt-2">Maintain current pace for 3 more days to reach Master Tier.</p>
-                    </div>
-                    <div className="p-8 bg-zinc-950 border border-white/5 rounded-[2.5rem]">
-                       <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">LAST FAVORITE</p>
-                       <p className="text-lg font-black italic uppercase">Chest Annihilation</p>
-                       <button className="mt-4 text-[10px] font-black uppercase text-emerald-500 hover:underline">REUSE PROTOCOL</button>
-                    </div>
+              <div className="lg:col-span-4 bg-emerald-500 p-12 rounded-[4rem] text-black shadow-2xl shadow-emerald-500/10 flex flex-col justify-between">
+                 <div>
+                   <Target className="w-16 h-16 mb-8" />
+                   <h3 className="text-4xl font-black italic uppercase leading-none mb-4">Focus Target</h3>
+                   <p className="text-sm font-medium opacity-80 leading-relaxed mb-8">System analysis recommends prioritizing posterior chain stability for elite kinematic output.</p>
+                 </div>
+                 <div className="space-y-4">
+                   <div className="h-4 bg-black/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-black w-[88%]" />
+                   </div>
+                   <p className="text-[10px] font-black uppercase tracking-widest">Protocol Completion: 88%</p>
                  </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* New Session Wizard */}
+        {activeSection === 'new-workout' && (
+          <div className="h-full flex flex-col md:flex-row bg-black animate-in slide-in-from-bottom-12 duration-700">
+             {/* Left: Step 1 (Muscles) */}
+             <div className={`flex-1 p-12 flex flex-col items-center border-r border-white/5 overflow-y-auto custom-scrollbar transition-all duration-500 ${workoutStep === 'exercises' ? 'md:opacity-40 grayscale-[0.5]' : 'opacity-100'}`}>
+                <div className="w-full max-w-lg space-y-12">
+                   <header className="text-center space-y-4">
+                      <h2 className="text-5xl font-black italic uppercase tracking-tighter">PHASE I: <span className="text-emerald-500">TAGGING</span></h2>
+                      <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em]">Choose the muscles of the session</p>
+                   </header>
+
+                   <div className="relative aspect-[4/6] w-full bg-zinc-900/30 rounded-[4.5rem] border border-white/5 p-12 flex flex-col items-center group overflow-hidden">
+                      <div className="absolute inset-0 bg-emerald-500/5 blur-[100px] scale-125 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="relative w-full h-full flex items-center justify-center scale-110">
+                         <svg viewBox="0 0 200 450" className="w-full h-full relative z-10 drop-shadow-[0_0_50px_rgba(0,0,0,0.9)]">
+                            <defs><filter id="logNeon"><feGaussianBlur stdDeviation="3" result="cb"/><feMerge><feMergeNode in="cb"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                            <path d="M100,20 C120,20 135,40 135,65 C135,75 145,80 170,85 L180,180 L160,180 L155,220 L155,420 L115,420 L110,320 L90,320 L85,420 L45,420 L45,220 L40,180 L20,180 L30,85 C55,80 65,75 65,65 C65,40 80,20 100,20 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                            {newWorkout.view === 'front' ? (
+                              <>
+                                <DetailedMusclePath name="Chest" active={newWorkout.muscles.has('Chest')} onClick={() => toggleMuscle('Chest')} d="M75,95 Q100,85 125,95 L128,125 Q100,135 72,125 Z" />
+                                <DetailedMusclePath name="Shoulders" active={newWorkout.muscles.has('Shoulders')} onClick={() => toggleMuscle('Shoulders')} d="M55,85 Q75,75 85,90 L75,120 Q60,110 55,85 Z M145,85 Q125,75 115,90 L125,120 Q140,110 145,85 Z" />
+                                <DetailedMusclePath name="Abs" active={newWorkout.muscles.has('Abs')} onClick={() => toggleMuscle('Abs')} d="M82,135 Q100,128 118,135 L118,195 Q100,205 82,195 Z" />
+                                <DetailedMusclePath name="Quads" active={newWorkout.muscles.has('Quads')} onClick={() => toggleMuscle('Quads')} d="M72,215 L95,215 L85,320 L60,320 Z M105,215 L128,215 L140,320 L115,320 Z" />
+                                <DetailedMusclePath name="Biceps" active={newWorkout.muscles.has('Biceps')} onClick={() => toggleMuscle('Biceps')} d="M50,110 Q40,140 45,175 L65,175 Q65,140 55,110 Z M150,110 Q160,140 155,175 L135,175 Q135,140 145,110 Z" />
+                              </>
+                            ) : (
+                              <>
+                                <DetailedMusclePath name="Back" active={newWorkout.muscles.has('Back')} onClick={() => toggleMuscle('Back')} d="M70,90 Q100,80 130,90 L135,145 Q100,160 65,145 Z" />
+                                <DetailedMusclePath name="Triceps" active={newWorkout.muscles.has('Triceps')} onClick={() => toggleMuscle('Triceps')} d="M45,110 Q40,150 45,185 L65,185 Q65,150 55,110 Z M155,110 Q160,150 155,185 L135,185 Q135,150 145,110 Z" />
+                                <DetailedMusclePath name="Glutes" active={newWorkout.muscles.has('Glutes')} onClick={() => toggleMuscle('Glutes')} d="M65,210 Q100,195 135,210 L140,245 Q100,260 60,245 Z" />
+                                <DetailedMusclePath name="Hamstrings" active={newWorkout.muscles.has('Hamstrings')} onClick={() => toggleMuscle('Hamstrings')} d="M70,255 L95,255 L85,340 L60,340 Z M105,255 L130,255 L140,340 L115,340 Z" />
+                              </>
+                            )}
+                         </svg>
+                      </div>
+                      <button onClick={() => setNewWorkout(p => ({ ...p, view: p.view === 'front' ? 'back' : 'front' }))} className="absolute bottom-10 flex items-center gap-3 px-8 py-3 bg-zinc-950 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition-all">
+                         <RotateCcw className="w-4 h-4" /> Switch Scanner
+                      </button>
+                   </div>
+                   <div className="flex flex-wrap justify-center gap-3">
+                      {['Chest', 'Back', 'Quads', 'Hamstrings', 'Shoulders', 'Biceps', 'Triceps', 'Abs', 'Glutes', 'Calves', 'Forearms'].map(m => (
+                        <button key={m} onClick={() => toggleMuscle(m as MuscleGroup)} className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${newWorkout.muscles.has(m as MuscleGroup) ? 'bg-emerald-500 border-emerald-400 text-black shadow-lg shadow-emerald-500/20' : 'bg-zinc-900 border-white/5 text-zinc-600'}`}>{m}</button>
+                      ))}
+                   </div>
+                   <button disabled={newWorkout.muscles.size === 0} onClick={() => setWorkoutStep('exercises')} className="w-full py-8 bg-emerald-500 text-black rounded-[3rem] font-black uppercase italic tracking-widest flex items-center justify-center gap-4 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-10 shadow-2xl">
+                     Confirm Muscles <ArrowRight className="w-6 h-6" />
+                   </button>
+                </div>
+             </div>
+
+             {/* Right: Step 2 (Exercises) */}
+             <div className={`flex-[1.5] p-12 bg-zinc-950 flex flex-col overflow-y-auto custom-scrollbar transition-all duration-700 ${workoutStep === 'muscles' ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
+                <div className="max-w-4xl mx-auto w-full space-y-12">
+                   <header className="space-y-4">
+                      <h3 className="text-xs font-black uppercase tracking-[0.4em] text-zinc-500">Phase II: Now choose the exercises for this session</h3>
+                      <input type="text" placeholder="SESSION TITLE..." value={newWorkout.title} onChange={(e) => setNewWorkout(p => ({ ...p, title: e.target.value }))} className="w-full bg-transparent border-b-2 border-white/10 py-6 text-5xl font-black italic uppercase tracking-tight outline-none focus:border-emerald-500 transition-colors placeholder:text-zinc-800" />
+                   </header>
+
+                   <div className="space-y-12">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-black uppercase tracking-[0.4em] text-zinc-500">Kinetic Chain Streams</h3>
+                        <button onClick={addExercise} className="flex items-center gap-3 bg-emerald-500/10 text-emerald-500 px-6 py-3 rounded-2xl border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition-all shadow-lg"><Plus className="w-4 h-4"/> Add Entry</button>
+                      </div>
+
+                      <div className="space-y-10">
+                        {newWorkout.exercises.map((ex, exIdx) => (
+                          <div key={ex.id} className="bg-zinc-900/40 p-12 rounded-[4rem] border border-white/5 space-y-10 group hover:bg-zinc-900/60 transition-all">
+                             <div className="flex items-center justify-between gap-6">
+                               <input placeholder="NAME OF MOVEMENT..." value={ex.name} onChange={(e) => { const n = [...newWorkout.exercises]; n[exIdx].name = e.target.value; setNewWorkout(p => ({ ...p, exercises: n })); }} className="bg-transparent font-black italic text-3xl uppercase outline-none flex-1 placeholder:text-zinc-800" />
+                               <button onClick={() => setNewWorkout(p => ({ ...p, exercises: p.exercises.filter(x => x.id !== ex.id) }))} className="text-zinc-800 hover:text-red-500 p-3"><Trash2 className="w-6 h-6" /></button>
+                             </div>
+
+                             <div className="space-y-6">
+                               <div className="grid grid-cols-12 gap-6 px-6 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-700">
+                                  <div className="col-span-1">SERIES</div><div className="col-span-5 text-center">KG</div><div className="col-span-5 text-center">REPS</div><div className="col-span-1"></div>
+                               </div>
+                               <div className="space-y-4">
+                                 {ex.sets.map((set, sIdx) => (
+                                   <div key={set.id} className="grid grid-cols-12 gap-6 items-center bg-black/40 p-4 rounded-3xl border border-white/5 group/set">
+                                      <div className="col-span-1 text-center font-black italic text-zinc-600 text-xl">{sIdx + 1}</div>
+                                      <div className="col-span-5 flex items-center gap-2">
+                                         <button onClick={() => updateSet(exIdx, sIdx, 'weight', Math.max(0, set.weight - 2.5))} className="p-3 bg-zinc-900 rounded-xl hover:text-emerald-500"><Minus className="w-4 h-4"/></button>
+                                         <input type="number" value={set.weight || ''} onChange={(e) => updateSet(exIdx, sIdx, 'weight', parseFloat(e.target.value) || 0)} className="w-full bg-zinc-900 border border-white/5 rounded-2xl py-4 text-center font-black italic tabular-nums text-emerald-400 outline-none" />
+                                         <button onClick={() => updateSet(exIdx, sIdx, 'weight', set.weight + 2.5)} className="p-3 bg-zinc-900 rounded-xl hover:text-emerald-500"><Plus className="w-4 h-4"/></button>
+                                      </div>
+                                      <div className="col-span-5 flex items-center gap-2">
+                                         <button onClick={() => updateSet(exIdx, sIdx, 'reps', Math.max(1, set.reps - 1))} className="p-3 bg-zinc-900 rounded-xl hover:text-emerald-500"><Minus className="w-4 h-4"/></button>
+                                         <input type="number" value={set.reps || ''} onChange={(e) => updateSet(exIdx, sIdx, 'reps', parseInt(e.target.value) || 0)} className="w-full bg-zinc-900 border border-white/5 rounded-2xl py-4 text-center font-black italic tabular-nums outline-none" />
+                                         <button onClick={() => updateSet(exIdx, sIdx, 'reps', set.reps + 1)} className="p-3 bg-zinc-900 rounded-xl hover:text-emerald-500"><Plus className="w-4 h-4"/></button>
+                                      </div>
+                                      <div className="col-span-1 text-right">
+                                         <button onClick={() => { const n = [...newWorkout.exercises]; n[exIdx].sets.splice(sIdx, 1); setNewWorkout(p => ({ ...p, exercises: n })); }} className="text-zinc-800 hover:text-red-500 p-3 opacity-0 group-hover/set:opacity-100"><X className="w-5 h-5"/></button>
+                                      </div>
+                                   </div>
+                                 ))}
+                               </div>
+                               <button onClick={() => addSet(exIdx)} className="w-full py-5 border-2 border-dashed border-white/5 rounded-[2rem] text-[11px] font-black uppercase tracking-widest text-zinc-700 hover:text-white transition-all">+ Add series like previous</button>
+                             </div>
+                          </div>
+                        ))}
+                      </div>
+                   </div>
+
+                   <div className="flex flex-col gap-6 pt-12 pb-24">
+                      <div className="flex items-center justify-between px-8 py-6 bg-zinc-900/50 rounded-[2.5rem] border border-white/5">
+                         <div className="flex items-center gap-4">
+                            <Star className={`w-6 h-6 ${newWorkout.isFavorite ? 'text-emerald-500 fill-emerald-500' : 'text-zinc-700'}`} />
+                            <span className="text-sm font-black uppercase italic tracking-widest">Save Protocol as Favorite?</span>
+                         </div>
+                         <button onClick={() => setNewWorkout(p => ({ ...p, isFavorite: !p.isFavorite }))} className={`w-14 h-8 rounded-full transition-all relative ${newWorkout.isFavorite ? 'bg-emerald-500' : 'bg-zinc-800'}`}>
+                            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${newWorkout.isFavorite ? 'right-1' : 'left-1'}`} />
+                         </button>
+                      </div>
+                      <div className="flex gap-4">
+                         <button onClick={resetNewWorkout} className="flex-1 py-8 bg-zinc-900 text-zinc-700 rounded-[3rem] font-black uppercase italic tracking-widest hover:text-white">Discard</button>
+                         <button onClick={saveWorkout} disabled={newWorkout.exercises.length === 0} className="flex-[2] py-8 bg-emerald-500 text-black rounded-[3rem] font-black uppercase italic tracking-widest shadow-2xl active:scale-95 transition-all disabled:opacity-10 flex items-center justify-center gap-4">
+                            <Save className="w-6 h-6" /> Store Archives
+                         </button>
+                      </div>
+                   </div>
+                </div>
+             </div>
+          </div>
+        )}
+
+        {/* AI Coach */}
+        {activeSection === 'ai-coach' && (
+          <div className="h-full flex flex-col items-center justify-center p-12 bg-black">
+            {!isAIActive && !isPositioning ? (
+              <div className="max-w-6xl w-full space-y-16 animate-in fade-in duration-1000">
+                <header className="text-center space-y-6">
+                  <div className="flex items-center justify-center gap-4 mb-4">
+                    <ShieldCheck className="w-12 h-12 text-emerald-500" />
+                    <h2 className="text-7xl font-black italic uppercase tracking-tighter leading-none">AI <span className="text-emerald-500">COACH</span></h2>
+                  </div>
+                  <div className="max-w-3xl mx-auto space-y-6">
+                    <div className="bg-zinc-900/50 p-10 rounded-[3.5rem] border border-white/5 space-y-6">
+                      <p className="text-zinc-300 text-xl font-medium leading-relaxed">
+                        Precision biomechanics at your fingertips. Choose your movement below to initiate the neural tracking protocol.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-6 border-t border-white/5">
+                        <StepInstruction num="1" text="Select Movement" />
+                        <StepInstruction num="2" text="Step Into Frame" />
+                        <StepInstruction num="3" text="Execute Protocol" />
+                      </div>
+                    </div>
+                  </div>
+                </header>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                  {Object.values(ExerciseType).filter(t => t !== ExerciseType.CUSTOM).map(t => (
+                    <button key={t} onClick={() => { setSelectedAIExercise(t); setIsPositioning(true); }} className="bg-zinc-900/40 border border-white/5 p-12 rounded-[3.5rem] hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group flex flex-col items-center gap-8 shadow-2xl">
+                      <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-zinc-500 group-hover:text-emerald-500 group-hover:scale-110 transition-all"><Activity className="w-8 h-8" /></div>
+                      <span className="font-black uppercase italic tracking-tighter text-xl">{t.replace('_', ' ')}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : isPositioning ? (
+              <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+                <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover grayscale opacity-30" playsInline muted />
+                <canvas ref={canvasRef} width={1280} height={720} className="absolute inset-0 w-full h-full object-cover" />
+                
+                {/* Minimized calibration UI to keep subject visible */}
+                <div className="absolute bottom-10 right-10 z-20 bg-zinc-950/95 border border-white/10 p-8 rounded-[3rem] text-center space-y-6 backdrop-blur-3xl shadow-2xl max-w-xs w-full animate-in slide-in-from-right-10">
+                   <div className="flex justify-center"><ShieldCheck className="w-8 h-8 text-emerald-500" /></div>
+                   <h3 className="text-xl font-black italic uppercase">System Sync</h3>
+                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Adjust until the indicator turns green.</p>
+                   <div className="space-y-2">
+                      <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
+                        <div className={`h-full transition-all duration-700 ${positionScore === 100 ? 'bg-emerald-500' : 'bg-orange-500'}`} style={{ width: `${positionScore}%` }} />
+                      </div>
+                      <p className="text-[9px] font-black uppercase text-zinc-600">{positionScore}% BIO-LOCK</p>
+                   </div>
+                   {countdown !== null && <div className="text-9xl font-black italic text-emerald-500 animate-pulse">{countdown}</div>}
+                   <button onClick={endSession} className="w-full py-4 bg-zinc-900 hover:bg-red-500/20 text-red-500 rounded-2xl font-black uppercase text-[9px] tracking-widest transition-all">Abort Sync</button>
+                </div>
+                <div className="absolute top-10 left-10 flex items-center gap-4 bg-black/60 px-6 py-3 rounded-full border border-white/10 backdrop-blur-md">
+                   <Info className="w-4 h-4 text-emerald-500" />
+                   <p className="text-[10px] font-black uppercase tracking-widest">Awaiting full silhouette visibility...</p>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full h-full flex flex-col md:flex-row gap-12 p-10 animate-in fade-in duration-500">
+                 <div className="flex-1 relative bg-zinc-950 rounded-[4rem] border border-white/5 overflow-hidden shadow-2xl">
+                    <video ref={videoRef} className="hidden" playsInline muted />
+                    <canvas ref={canvasRef} width={1280} height={720} className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute top-12 left-12 flex flex-col gap-4">
+                       <div className="px-8 py-4 bg-black/80 border border-white/10 rounded-full flex items-center gap-4 backdrop-blur-2xl">
+                          <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.4em]">NEURAL CORE: ENGAGED</span>
+                       </div>
+                    </div>
+                    <div className="absolute bottom-12 right-12 text-right">
+                       <p className="text-[14rem] font-black italic text-emerald-500 tracking-tighter leading-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)]">{repCount}</p>
+                       <p className="text-[11px] font-black uppercase text-zinc-500 tracking-[0.6em] mt-2">REPETITIONS COMPLETE</p>
+                    </div>
+                 </div>
+
+                 <div className="w-full md:w-[420px] flex flex-col gap-10">
+                    <div className="bg-zinc-900/40 p-12 rounded-[4rem] border border-white/5 space-y-10 backdrop-blur-2xl">
+                       <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-700 flex items-center gap-4"><Activity className="w-5 h-5 text-emerald-500" /> BIO-DATA STREAM</h3>
+                       <div className="space-y-6">
+                          <StatMiniRow label="Knee Flexion" value={currentAngles ? `${currentAngles.leftKnee}°` : '--'} />
+                          <StatMiniRow label="Hip Kinematics" value={currentAngles ? `${currentAngles.leftHip}°` : '--'} />
+                          <StatMiniRow label="Back Integrity" value={currentAngles ? `${currentAngles.backAngle}°` : '--'} />
+                       </div>
+                    </div>
+                    <div className={`flex-1 p-12 rounded-[4rem] border transition-all duration-700 flex flex-col justify-center text-center ${lastFeedback?.status === 'critical' ? 'bg-red-500/10 border-red-500/40' : lastFeedback?.status === 'warning' ? 'bg-orange-500/10 border-orange-500/40' : 'bg-zinc-950/80 border-white/5'}`}>
+                       <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-700 mb-8 flex items-center justify-center gap-4"><Zap className="w-5 h-5 text-emerald-500" /> AI COACH FEEDBACK</h3>
+                       <p className="text-3xl font-black italic text-zinc-100 leading-tight uppercase tracking-tighter">{lastFeedback?.message || "READY FOR NEXT MOVEMENT"}</p>
+                    </div>
+                    <button onClick={endSession} className="w-full py-10 bg-zinc-900 hover:bg-emerald-500 hover:text-black rounded-[2.5rem] font-black uppercase italic tracking-widest transition-all shadow-2xl">TERMINATE PROTOCOL</button>
+                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeSection === 'nutrition' && (
+          <div className="h-full flex flex-col items-center justify-center p-12 bg-black animate-in fade-in duration-700">
+             <div className="w-32 h-32 bg-emerald-500/5 rounded-full flex items-center justify-center mb-10"><Utensils className="w-16 h-16 text-emerald-500/10" /></div>
+             <h2 className="text-6xl font-black uppercase italic tracking-tighter text-center">NUTRITION <span className="text-zinc-800">VAULT</span></h2>
+             <p className="text-zinc-600 font-mono text-[10px] uppercase tracking-[0.5em] mt-6 text-center">METABOLIC DATA INTEGRATION SCHEDULED</p>
+          </div>
+        )}
+
+        {/* Calendar / History */}
         {activeSection === 'history' && (
           <div className="p-12 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700">
              <header className="flex items-center justify-between">
                 <div>
-                   <h2 className="text-6xl font-black italic uppercase tracking-tighter">TEMPORAL <span className="text-emerald-500">VAULT</span></h2>
-                   <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.5em] mt-2">Biometric Timeline</p>
+                   <h2 className="text-6xl font-black italic uppercase tracking-tighter">THE <span className="text-emerald-500">VAULT</span></h2>
+                   <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.5em] mt-2">Historical Biometric Archive</p>
                 </div>
              </header>
 
              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                <div className="lg:col-span-8 bg-zinc-900/30 border border-white/5 p-10 rounded-[4rem] backdrop-blur-xl">
+                <div className="lg:col-span-8 bg-zinc-900/30 border border-white/5 p-12 rounded-[4rem] backdrop-blur-xl">
                    <div className="grid grid-cols-7 gap-4">
                       {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
                         <div key={d} className="text-center text-[10px] font-black uppercase tracking-widest text-zinc-800 pb-4">{d}</div>
@@ -332,15 +559,15 @@ const App: React.FC = () => {
                           <button 
                             key={i} 
                             onClick={() => setSelectedHistoryDate(date)}
-                            className={`aspect-square rounded-3xl border flex flex-col items-center justify-center gap-1 transition-all relative ${
+                            className={`aspect-square rounded-[1.5rem] border flex flex-col items-center justify-center gap-1 transition-all relative ${
                               isSelected ? 'bg-white text-black border-white shadow-2xl scale-110 z-10' : 
                               daySessions.length > 0 ? 'bg-emerald-500/10 border-emerald-500/40 hover:border-emerald-500' : 'bg-transparent border-white/5 hover:border-white/20'
                             }`}
                           >
-                             <span className="text-xl font-black italic">{day}</span>
+                             <span className="text-2xl font-black italic">{day}</span>
                              {daySessions.length > 0 && !isSelected && (
                                <div className="flex gap-1 absolute bottom-2">
-                                 {daySessions.map((_, idx) => <div key={idx} className="w-1 h-1 bg-emerald-500 rounded-full" />)}
+                                 {daySessions.map((_, idx) => <div key={idx} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />)}
                                </div>
                              )}
                           </button>
@@ -351,10 +578,10 @@ const App: React.FC = () => {
 
                 <div className="lg:col-span-4 space-y-6 overflow-y-auto max-h-[70vh] pr-4 custom-scrollbar">
                    <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500 flex items-center gap-3">
-                      <Clock className="w-4 h-4 text-emerald-500" /> Analysis for {selectedHistoryDate.toLocaleDateString()}
+                      <Clock className="w-4 h-4 text-emerald-500" /> Logs for {selectedHistoryDate.toLocaleDateString()}
                    </h3>
                    {sessionsForDate.length > 0 ? sessionsForDate.map(s => (
-                     <div key={s.id} className="bg-zinc-900 border border-white/5 p-10 rounded-[3rem] space-y-8 animate-in slide-in-from-bottom-4">
+                     <div key={s.id} className="bg-zinc-900 border border-white/5 p-10 rounded-[3.5rem] space-y-8 animate-in slide-in-from-bottom-4">
                         <header className="flex justify-between items-start">
                           <div>
                             <h4 className="text-2xl font-black italic uppercase text-emerald-500 leading-none">{s.title}</h4>
@@ -369,7 +596,7 @@ const App: React.FC = () => {
                                    <Dumbbell className="w-4 h-4 text-emerald-500/50" />
                                    <span className="text-sm font-black uppercase italic text-zinc-300">{ex.name}</span>
                                 </div>
-                                <div className="grid grid-cols-3 gap-3">
+                                <div className="grid grid-cols-2 gap-3">
                                    {ex.sets.map((set, idx) => (
                                      <div key={idx} className="bg-white/5 p-3 rounded-2xl border border-white/5">
                                         <p className="text-[10px] font-black uppercase text-zinc-700">SET {idx+1}</p>
@@ -384,126 +611,11 @@ const App: React.FC = () => {
                    )) : (
                      <div className="py-24 text-center border-2 border-dashed border-white/5 rounded-[4rem] opacity-20 flex flex-col items-center">
                         <Activity className="w-12 h-12 mb-4" />
-                        <p className="text-xs font-black uppercase tracking-[0.3em]">No Logs Detected</p>
+                        <p className="text-xs font-black uppercase tracking-[0.3em]">No Archives Detected</p>
                      </div>
                    )}
                 </div>
              </div>
-          </div>
-        )}
-
-        {/* AI Coach Section */}
-        {activeSection === 'ai-coach' && (
-          <div className="h-full flex flex-col items-center justify-center p-12 bg-black">
-            {!isAIActive && !isPositioning ? (
-              <div className="max-w-6xl w-full space-y-16 animate-in fade-in duration-1000">
-                <header className="text-center space-y-6">
-                  <div className="flex items-center justify-center gap-4 mb-4">
-                    <ShieldCheck className="w-12 h-12 text-emerald-500" />
-                    <h2 className="text-7xl font-black italic uppercase tracking-tighter leading-none">AI <span className="text-emerald-500">KINETICS</span></h2>
-                  </div>
-                  <div className="max-w-3xl mx-auto space-y-6">
-                    <div className="bg-zinc-900/50 p-8 rounded-[2.5rem] border border-white/5 space-y-4">
-                      <p className="text-zinc-300 text-lg font-medium leading-relaxed">
-                        Welcome to the neural biomechanics laboratory. This system uses real-time computer vision to track your kinetic chain.
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-                        <div className="flex flex-col items-center gap-2 text-center">
-                          <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-black">1</div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Select Movement</p>
-                        </div>
-                        <div className="flex flex-col items-center gap-2 text-center">
-                          <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-black">2</div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Step Into Frame</p>
-                        </div>
-                        <div className="flex flex-col items-center gap-2 text-center">
-                          <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-black">3</div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Perform Protocol</p>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-zinc-600 text-[9px] font-mono uppercase tracking-[0.5em]">
-                      STATUS: NEURAL CORE READY • TRACKING 33 BIOMETRIC POINTS
-                    </p>
-                  </div>
-                </header>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                  {Object.values(ExerciseType).filter(t => t !== ExerciseType.CUSTOM).map(t => (
-                    <button key={t} onClick={() => { setSelectedAIExercise(t); setIsPositioning(true); }} className="bg-zinc-900/40 border border-white/5 p-12 rounded-[3.5rem] hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group flex flex-col items-center gap-8 shadow-2xl">
-                      <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-zinc-500 group-hover:text-emerald-500 transition-colors group-hover:scale-110"><Activity className="w-8 h-8" /></div>
-                      <span className="font-black uppercase italic tracking-tighter text-xl">{t.replace('_', ' ')}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : isPositioning ? (
-              <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-                <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover grayscale opacity-20" playsInline muted />
-                <canvas ref={canvasRef} width={1280} height={720} className="absolute inset-0 w-full h-full object-cover" />
-                
-                {/* Smaller, side-anchored calibration panel to keep user visible */}
-                <div className="absolute right-12 bottom-12 z-10 bg-zinc-950/90 border border-white/10 p-10 rounded-[3rem] text-center space-y-8 backdrop-blur-2xl shadow-2xl max-w-xs w-full animate-in slide-in-from-right-12">
-                   <div className="flex justify-center mb-2"><ShieldCheck className="w-8 h-8 text-emerald-500" /></div>
-                   <h3 className="text-2xl font-black italic uppercase">Calibration</h3>
-                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest leading-relaxed">Step back until your head and feet are fully visible in the frame.</p>
-                   <div className="space-y-3">
-                      <div className="h-4 bg-zinc-800 rounded-full overflow-hidden border border-white/5">
-                        <div className={`h-full transition-all duration-700 ${positionScore === 100 ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.8)]' : 'bg-orange-500'}`} style={{ width: `${positionScore}%` }} />
-                      </div>
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">{positionScore}% BIOMETRIC SCAN COMPLETE</p>
-                   </div>
-                   {countdown !== null && <div className="text-8xl font-black italic text-emerald-500 animate-pulse">{countdown}</div>}
-                   <button onClick={endSession} className="w-full py-4 bg-zinc-900 hover:bg-red-500 rounded-2xl font-black uppercase text-[9px] tracking-widest transition-all">Abort Calibration</button>
-                </div>
-
-                <div className="absolute top-12 left-12 flex items-center gap-4 bg-black/40 px-6 py-3 rounded-full border border-white/10 backdrop-blur-md">
-                   <Info className="w-4 h-4 text-emerald-500" />
-                   <p className="text-[10px] font-black uppercase tracking-widest">Adjusting stance for {selectedAIExercise.replace('_', ' ')}...</p>
-                </div>
-              </div>
-            ) : (
-              <div className="w-full h-full flex flex-col md:flex-row gap-12 p-10 animate-in fade-in duration-500">
-                 <div className="flex-1 relative bg-zinc-950 rounded-[4rem] border border-white/5 overflow-hidden shadow-2xl">
-                    <video ref={videoRef} className="hidden" playsInline muted />
-                    <canvas ref={canvasRef} width={1280} height={720} className="absolute inset-0 w-full h-full object-cover" />
-                    <div className="absolute top-12 left-12 flex flex-col gap-4">
-                       <div className="px-8 py-4 bg-black/80 border border-white/10 rounded-full flex items-center gap-4 backdrop-blur-2xl">
-                          <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.4em]">NEURAL STREAM: ACTIVE</span>
-                       </div>
-                    </div>
-                    <div className="absolute bottom-12 right-12 text-right">
-                       <p className="text-[14rem] font-black italic text-emerald-500 tracking-tighter leading-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)]">{repCount}</p>
-                       <p className="text-[11px] font-black uppercase text-zinc-500 tracking-[0.6em] mt-2">REPETITIONS COMPLETE</p>
-                    </div>
-                 </div>
-
-                 <div className="w-full md:w-[420px] flex flex-col gap-10">
-                    <div className="bg-zinc-900/40 p-12 rounded-[4rem] border border-white/5 space-y-10 backdrop-blur-2xl">
-                       <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-700 flex items-center gap-4"><Activity className="w-5 h-5 text-emerald-500" /> LIVE BIOMETRICS</h3>
-                       <div className="space-y-6">
-                          <StatMiniRow label="Knee Flexion" value={currentAngles ? `${currentAngles.leftKnee}°` : '--'} />
-                          <StatMiniRow label="Hip Angle" value={currentAngles ? `${currentAngles.leftHip}°` : '--'} />
-                          <StatMiniRow label="Back Deviation" value={currentAngles ? `${currentAngles.backAngle}°` : '--'} />
-                       </div>
-                    </div>
-                    <div className={`flex-1 p-12 rounded-[4rem] border transition-all duration-700 flex flex-col justify-center text-center ${lastFeedback?.status === 'critical' ? 'bg-red-500/10 border-red-500/40' : lastFeedback?.status === 'warning' ? 'bg-orange-500/10 border-orange-500/40' : 'bg-zinc-950/80 border-white/5'}`}>
-                       <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-700 mb-8 flex items-center justify-center gap-4"><Zap className="w-5 h-5 text-emerald-500" /> AI FEEDBACK</h3>
-                       <p className="text-3xl font-black italic text-zinc-100 leading-tight uppercase tracking-tighter">{lastFeedback?.message || "CALIBRATING KINETIC CHAIN..."}</p>
-                    </div>
-                    <button onClick={endSession} className="w-full py-10 bg-zinc-900 hover:bg-emerald-500 hover:text-black rounded-[2.5rem] font-black uppercase italic tracking-widest transition-all active:scale-95 shadow-2xl">TERMINATE PROTOCOL</button>
-                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Nutrition Module Placeholder */}
-        {activeSection === 'nutrition' && (
-          <div className="h-full flex flex-col items-center justify-center p-12 bg-black animate-in fade-in duration-700">
-             <div className="w-32 h-32 bg-emerald-500/5 rounded-full flex items-center justify-center mb-10"><Utensils className="w-16 h-16 text-emerald-500/10" /></div>
-             <h2 className="text-6xl font-black uppercase italic tracking-tighter text-center">ANABOLIC <span className="text-zinc-800">VAULT</span></h2>
-             <p className="text-zinc-600 font-mono text-[10px] uppercase tracking-[0.5em] mt-6 text-center">PHASE 3: METABOLIC INTEGRATION SCHEDULED</p>
           </div>
         )}
       </main>
@@ -513,7 +625,7 @@ const App: React.FC = () => {
 
 // Sub-components
 const NavButton: React.FC<{ icon: any; active: boolean; onClick: () => void; className?: string }> = ({ icon, active, onClick, className }) => (
-  <button onClick={onClick} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${active ? 'bg-zinc-900 text-emerald-500 shadow-[0_10px_30px_rgba(16,185,129,0.2)]' : 'text-zinc-800 hover:text-zinc-400'} ${className}`}>
+  <button onClick={onClick} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${active ? 'bg-zinc-900 text-emerald-500 shadow-2xl' : 'text-zinc-800 hover:text-zinc-400'} ${className}`}>
     {React.cloneElement(icon, { className: 'w-6 h-6' })}
   </button>
 );
@@ -537,11 +649,18 @@ const DetailedMusclePath: React.FC<{ name: string; d: string; active: boolean; o
   <path 
     d={d} 
     onClick={onClick}
-    filter={active ? "url(#neonGlow)" : ""}
+    filter={active ? "url(#logNeon)" : ""}
     className={`cursor-pointer transition-all duration-700 outline-none ${
       active ? 'fill-emerald-500' : 'fill-zinc-800/40 hover:fill-zinc-700'
     }`} 
   />
+);
+
+const StepInstruction: React.FC<{ num: string; text: string }> = ({ num, text }) => (
+  <div className="flex flex-col items-center gap-3 text-center group">
+    <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-black text-sm group-hover:scale-110 transition-transform">{num}</div>
+    <p className="text-[11px] font-black uppercase tracking-widest text-zinc-500">{text}</p>
+  </div>
 );
 
 export default App;
