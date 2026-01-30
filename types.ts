@@ -35,21 +35,15 @@ export enum ExerciseType {
   CUSTOM = 'CUSTOM'
 }
 
-export interface SimulationState {
-  isGenerating: boolean;
-  videoUrl: string | null;
-  statusMessage: string;
-}
-
 export type MuscleGroup = 
   | 'Chest' | 'Back' | 'Quads' | 'Hamstrings' 
-  | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs' | 'Glutes' | 'Calves' | 'Forearms';
+  | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs' 
+  | 'Glutes' | 'Calves' | 'Forearms' | 'Lower Back' | 'Lats';
 
-export interface WorkoutSet {
+export interface ExerciseSet {
   id: string;
   reps: number;
   weight: number;
-  rpe?: number; // Rate of Perceived Exertion
   completed: boolean;
 }
 
@@ -57,24 +51,7 @@ export interface LoggedExercise {
   id: string;
   name: string;
   type: ExerciseType;
-  sets: WorkoutSet[];
-  primaryMuscle?: MuscleGroup;
-}
-
-export interface RoutineExercise {
-  id: string;
-  name: string;
-  type: ExerciseType;
-  primaryMuscle?: MuscleGroup;
-  targetSets: number;
-  targetReps: number;
-}
-
-export interface Routine {
-  id: string;
-  name: string;
-  exercises: RoutineExercise[];
-  muscles: MuscleGroup[];
+  sets: ExerciseSet[];
 }
 
 export interface WorkoutSession {
@@ -84,8 +61,9 @@ export interface WorkoutSession {
   exercises: LoggedExercise[];
   muscles: MuscleGroup[];
   totalVolume: number;
-  durationMinutes: number;
-  isAI?: boolean;
+  duration?: number;
+  isFavorite?: boolean;
 }
 
-export type AppSection = 'dashboard' | 'new-session' | 'routines' | 'ai-coach' | 'analytics' | 'settings';
+export type AppSection = 'dashboard' | 'history' | 'new-workout' | 'ai-coach' | 'nutrition';
+export type WorkoutStep = 'muscles' | 'exercises';
