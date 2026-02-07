@@ -67,3 +67,32 @@ export interface WorkoutSession {
 
 export type AppSection = 'dashboard' | 'history' | 'new-workout' | 'ai-coach' | 'nutrition';
 export type WorkoutStep = 'muscles' | 'exercises';
+
+// Nutrition Types
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+export interface Macronutrients {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+}
+
+export interface FoodItem extends Macronutrients {
+  id: string;
+  name: string;
+  timestamp: Date;
+  mealType: MealType;
+  description: string;
+}
+
+export interface UserProfile {
+  age: number;
+  weight: number; // in kg
+  height: number; // in cm
+  gender: 'male' | 'female';
+  activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'extra';
+  goal: 'lose' | 'maintain' | 'gain';
+  calorieGoal: number;
+  proteinGoal: number;
+}
