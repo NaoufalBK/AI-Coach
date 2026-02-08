@@ -339,9 +339,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans">
-      <nav className="w-20 bg-zinc-950 border-r border-white/5 flex flex-col items-center py-10 gap-8 z-50">
-        <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-black shadow-lg shadow-emerald-500/20 mb-4 animate-pulse"><Zap className="w-7 h-7" /></div>
+    <div className="flex h-screen bg-[#0a0e27] text-white overflow-hidden font-sans">
+      <nav className="w-20 bg-gradient-to-b from-zinc-950/80 via-blue-950/40 to-zinc-950/80 border-r border-emerald-500/10 flex flex-col items-center py-10 gap-8 z-50 backdrop-blur-xl shadow-2xl">
+        <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center text-black shadow-lg shadow-emerald-500/50 mb-4 animate-pulse"><Zap className="w-7 h-7" /></div>
         <NavButton icon={<LayoutGrid />} active={activeSection === 'dashboard'} onClick={() => { setActiveSection('dashboard'); stopCoachSpeech(); }} />
         <NavButton icon={<CalendarIcon />} active={activeSection === 'history'} onClick={() => { setActiveSection('history'); stopCoachSpeech(); }} />
         <NavButton icon={<Activity />} active={activeSection === 'ai-coach'} onClick={() => setActiveSection('ai-coach')} />
@@ -350,20 +350,21 @@ const App: React.FC = () => {
       </nav>
 
       <main className="flex-1 overflow-y-auto custom-scrollbar relative">
-        <div className="absolute inset-0 pointer-events-none opacity-20 overflow-hidden">
-          <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-emerald-500/10 blur-[120px] rounded-full" />
-          <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-blue-500/10 blur-[120px] rounded-full" />
+        <div className="absolute inset-0 pointer-events-none opacity-40 overflow-hidden">
+          <div className="absolute top-[10%] right-[-5%] w-[800px] h-[800px] bg-gradient-to-br from-emerald-500/20 to-transparent blur-3xl rounded-full animate-pulse" />
+          <div className="absolute bottom-[-10%] left-[-10%] w-[700px] h-[700px] bg-gradient-to-tr from-blue-500/15 via-purple-500/10 to-transparent blur-3xl rounded-full" />
+          <div className="absolute top-1/2 left-1/2 w-[600px] h-[600px] bg-gradient-to-br from-cyan-500/10 to-transparent blur-3xl rounded-full" />
         </div>
 
         {/* Dashboard Section */}
         {activeSection === 'dashboard' && (
-          <div className="p-12 max-w-7xl mx-auto space-y-16 animate-in fade-in duration-700">
+          <div className="p-12 max-w-7xl mx-auto space-y-16 opacity-0 animate-[fadeIn_0.7s_ease-in_forwards]">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div className="space-y-4">
-                <h1 className="text-7xl font-black italic uppercase tracking-tighter leading-none">THE <span className="text-emerald-500">CORE</span></h1>
-                <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.5em]">Biometric Performance Center</p>
+                <h1 className="text-7xl font-black italic uppercase tracking-tighter leading-none bg-gradient-to-r from-white via-emerald-300 to-emerald-500 bg-clip-text text-transparent">THE <span>CORE</span></h1>
+                <p className="text-zinc-400 font-mono text-[10px] uppercase tracking-[0.5em]">Biometric Performance Center</p>
               </div>
-              <button onClick={() => setActiveSection('new-workout')} className="group flex items-center gap-4 px-12 py-6 bg-emerald-500 text-black rounded-[2rem] font-black uppercase italic tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-emerald-500/20">
+              <button onClick={() => setActiveSection('new-workout')} className="group flex items-center gap-4 px-12 py-6 bg-gradient-to-r from-emerald-500 to-emerald-600 text-black rounded-[2rem] font-black uppercase italic tracking-widest hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-emerald-500/30">
                 <Plus className="w-6 h-6" /> Log Training Protocol
               </button>
             </header>
@@ -376,38 +377,38 @@ const App: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-              <div className="lg:col-span-8 bg-zinc-900/30 border border-white/5 p-12 rounded-[4rem] backdrop-blur-xl">
+              <div className="lg:col-span-8 bg-gradient-to-br from-zinc-900/40 via-zinc-900/20 to-transparent border border-white/10 p-12 rounded-[4rem] backdrop-blur-xl shadow-2xl hover:shadow-emerald-500/10 transition-all">
                 <h2 className="text-3xl font-black italic uppercase mb-10 flex items-center gap-4"><History className="w-7 h-7 text-emerald-500" /> Biometric History</h2>
                 <div className="space-y-6">
                   {sessions.slice(0, 4).map(s => (
-                    <div key={s.id} className="bg-zinc-900/50 border border-white/5 p-8 rounded-[3rem] flex items-center justify-between group hover:border-emerald-500/30 transition-all cursor-pointer">
+                    <div key={s.id} className="bg-gradient-to-r from-white/5 to-white/0 border border-white/10 p-8 rounded-[3rem] flex items-center justify-between group hover:border-emerald-500/50 hover:bg-gradient-to-r hover:from-emerald-500/10 hover:to-white/5 transition-all cursor-pointer shadow-lg">
                       <div className="flex items-center gap-8">
-                        <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center group-hover:bg-emerald-500/10 transition-colors"><Dumbbell className="w-8 h-8 text-zinc-500 group-hover:text-emerald-500" /></div>
+                        <div className="w-16 h-16 bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 rounded-3xl flex items-center justify-center group-hover:from-emerald-500/40 group-hover:to-emerald-500/10 transition-all shadow-lg"><Dumbbell className="w-8 h-8 text-emerald-500" /></div>
                         <div>
                           <h3 className="text-2xl font-black italic uppercase leading-none mb-2">{s.title}</h3>
                           <div className="flex flex-wrap gap-2">
-                             {s.muscles.map(m => <span key={m} className="text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-md">{m}</span>)}
+                             {s.muscles.map(m => <span key={m} className="text-[9px] font-black uppercase tracking-widest bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-500/30">{m}</span>)}
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
-                         <p className="text-3xl font-black italic text-emerald-400 tabular-nums">{s.totalVolume.toLocaleString()}</p>
-                         <p className="text-[10px] font-black uppercase text-zinc-600">KG LOAD</p>
+                         <p className="text-3xl font-black italic bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent tabular-nums">{s.totalVolume.toLocaleString()}</p>
+                         <p className="text-[10px] font-black uppercase text-zinc-500">KG LOAD</p>
                       </div>
                     </div>
                   ))}
-                  {sessions.length === 0 && <div className="py-24 text-center text-zinc-800 border-2 border-dashed border-white/5 rounded-[4rem]">Awaiting initial biometric input stream.</div>}
+                  {sessions.length === 0 && <div className="py-24 text-center text-zinc-700 border-2 border-dashed border-white/10 rounded-[4rem]">Awaiting initial biometric input stream.</div>}
                 </div>
               </div>
-              <div className="lg:col-span-4 bg-emerald-500 p-12 rounded-[4rem] text-black shadow-2xl shadow-emerald-500/10 flex flex-col justify-between">
+              <div className="lg:col-span-4 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 p-12 rounded-[4rem] text-black shadow-2xl shadow-emerald-500/30 flex flex-col justify-between hover:shadow-emerald-500/50 transition-all">
                  <div>
-                   <Target className="w-16 h-16 mb-8" />
+                   <div className="w-16 h-16 mb-8 p-4 bg-black/20 rounded-3xl"><Target className="w-full h-full" /></div>
                    <h3 className="text-4xl font-black italic uppercase leading-none mb-4">Focus Target</h3>
-                   <p className="text-sm font-medium opacity-80 leading-relaxed mb-8">System analysis recommends prioritizing posterior chain stability for elite kinematic output.</p>
+                   <p className="text-sm font-medium opacity-90 leading-relaxed mb-8">System analysis recommends prioritizing posterior chain stability for elite kinematic output.</p>
                  </div>
                  <div className="space-y-4">
-                   <div className="h-4 bg-black/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-black w-[88%]" />
+                   <div className="h-4 bg-black/20 rounded-full overflow-hidden">
+                      <div className="h-full bg-black/40 w-[88%]" />
                    </div>
                    <p className="text-[10px] font-black uppercase tracking-widest">Protocol Completion: 88%</p>
                  </div>
@@ -418,7 +419,7 @@ const App: React.FC = () => {
 
         {/* Nutrition Vault Section */}
         {activeSection === 'nutrition' && (
-          <div className="p-12 max-w-7xl mx-auto space-y-16 animate-in fade-in duration-700">
+          <div className="p-12 max-w-7xl mx-auto space-y-16 opacity-0 animate-[fadeIn_0.7s_ease-in_forwards]">
             {!userProfile ? (
               <div className="max-w-xl mx-auto bg-zinc-900 border border-white/5 p-12 rounded-[4rem] space-y-10 shadow-2xl">
                 <header className="text-center space-y-4">
@@ -509,7 +510,7 @@ const App: React.FC = () => {
                             const meals = getDayLogs(selectedNutritionDate).filter(l => l.mealType === type);
                             if (meals.length === 0) return null;
                             return (
-                              <div key={type} className="bg-zinc-950/40 p-10 rounded-[3.5rem] border border-white/5 space-y-6 animate-in slide-in-from-bottom-4">
+                              <div key={type} className="bg-zinc-950/40 p-10 rounded-[3.5rem] border border-white/5 space-y-6 opacity-0 animate-[slideInFromBottom_0.5s_ease-out_forwards]">
                                 <div className="flex items-center gap-4">
                                   <div className="w-10 h-10 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500">
                                     {type === 'breakfast' && <Coffee className="w-5 h-5" />}
@@ -591,7 +592,7 @@ const App: React.FC = () => {
         {activeSection === 'ai-coach' && (
           <div className="h-full flex flex-col items-center justify-center p-12 bg-black">
             {!isAIActive && !isPositioning ? (
-              <div className="max-w-6xl w-full space-y-16 animate-in fade-in duration-1000">
+              <div className="max-w-6xl w-full space-y-16 opacity-0 animate-[fadeIn_1s_ease-in_forwards]">
                 <header className="text-center space-y-6">
                   <div className="flex items-center justify-center gap-4 mb-4">
                     <ShieldCheck className="w-12 h-12 text-emerald-500" />
@@ -629,7 +630,7 @@ const App: React.FC = () => {
                    <p className="text-xs font-black uppercase tracking-widest">Protocol: {selectedAIExercise.replace('_', ' ')} • Adjusting stance...</p>
                 </div>
 
-                <div className="absolute bottom-12 right-12 z-20 bg-zinc-950/95 border border-white/10 p-10 rounded-[3.5rem] text-center space-y-8 backdrop-blur-3xl shadow-[0_0_80px_rgba(0,0,0,1)] max-w-xs w-full animate-in slide-in-from-right-12">
+                <div className="absolute bottom-12 right-12 z-20 bg-zinc-950/95 border border-white/10 p-10 rounded-[3.5rem] text-center space-y-8 backdrop-blur-3xl shadow-[0_0_80px_rgba(0,0,0,1)] max-w-xs w-full opacity-0 animate-[slideInFromRight_0.5s_ease-out_forwards]">
                    <div className="flex justify-center"><ShieldCheck className="w-12 h-12 text-emerald-500" /></div>
                    <h3 className="text-3xl font-black italic uppercase leading-none">AI SYNC</h3>
                    <p className="text-xs text-zinc-500 uppercase tracking-widest leading-relaxed">Move back until your entire silhouette is visible within the green frame.</p>
@@ -644,7 +645,7 @@ const App: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="w-full h-full flex flex-col md:flex-row gap-12 p-12 animate-in fade-in duration-500">
+              <div className="w-full h-full flex flex-col md:flex-row gap-12 p-12 opacity-0 animate-[fadeIn_0.5s_ease-in_forwards]">
                  <div className="flex-1 relative bg-zinc-950 rounded-[5rem] border border-white/5 overflow-hidden shadow-2xl group">
                     <video ref={videoRef} className="hidden" playsInline muted />
                     <canvas ref={canvasRef} width={1280} height={720} className="absolute inset-0 w-full h-full object-cover" />
@@ -682,7 +683,7 @@ const App: React.FC = () => {
 
         {/* Temporal Vault (History) Section */}
         {activeSection === 'history' && (
-          <div className="p-12 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700">
+          <div className="p-12 max-w-7xl mx-auto space-y-12 opacity-0 animate-[fadeIn_0.7s_ease-in_forwards]">
              <header className="flex items-center justify-between">
                 <div>
                   <h2 className="text-7xl font-black italic uppercase tracking-tighter leading-none">THE <span className="text-emerald-500">VAULT</span></h2>
@@ -711,7 +712,7 @@ const App: React.FC = () => {
                 </div>
                 <div className="lg:col-span-4 space-y-8 max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar">
                    {sessionsForDate.length > 0 ? sessionsForDate.map(s => (
-                     <div key={s.id} className="bg-zinc-900 border border-white/5 p-10 rounded-[4rem] space-y-10 animate-in slide-in-from-bottom-6 group">
+                     <div key={s.id} className="bg-zinc-900 border border-white/5 p-10 rounded-[4rem] space-y-10 opacity-0 animate-[slideInFromBottom_0.5s_ease-out_forwards] group">
                         <header className="flex justify-between items-start">
                           <div>
                             <h4 className="text-3xl font-black italic uppercase text-emerald-500 leading-none">{s.title}</h4>
@@ -751,7 +752,7 @@ const App: React.FC = () => {
 
         {/* New Workout Wizard (Grouped muscles/exercises) */}
         {activeSection === 'new-workout' && (
-          <div className="h-full flex flex-col md:flex-row bg-black animate-in slide-in-from-bottom-12 duration-700">
+          <div className="h-full flex flex-col md:flex-row bg-black opacity-0 animate-[slideInFromBottom_0.7s_ease-out_forwards]">
              <div className={`flex-1 p-12 flex flex-col items-center border-r border-white/5 overflow-y-auto custom-scrollbar transition-all duration-500 ${workoutStep === 'exercises' ? 'md:opacity-40 grayscale-[0.5]' : 'opacity-100'}`}>
                 <div className="w-full max-w-lg space-y-12">
                    <header className="text-center space-y-4">
@@ -861,12 +862,12 @@ const App: React.FC = () => {
 // Simplified Input Group for Onboarding
 const InputGroup: React.FC<{ label: string; value: any; onChange: (v: string) => void; icon?: any }> = ({ label, value, onChange, icon }) => (
   <div className="space-y-2">
-    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600 flex items-center gap-2">{icon} {label}</label>
+    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">{icon} {label}</label>
     <input 
       type="number" 
       value={value} 
       onChange={e => onChange(e.target.value)} 
-      className="w-full bg-black border border-white/10 rounded-2xl py-5 px-6 font-black italic text-xl outline-none focus:border-emerald-500 transition-colors" 
+      className="w-full bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-2xl py-5 px-6 font-black italic text-xl outline-none focus:border-emerald-500 focus:from-emerald-500/20 focus:to-emerald-500/10 transition-all shadow-lg" 
     />
   </div>
 );
@@ -875,16 +876,16 @@ const InputGroup: React.FC<{ label: string; value: any; onChange: (v: string) =>
 const MacroProgressCard: React.FC<{ label: string; current: number; target: number; color: string }> = ({ label, current, target, color }) => {
   const percent = Math.min(100, (current / target) * 100);
   return (
-    <div className="bg-zinc-900/30 border border-white/5 p-10 rounded-[3.5rem] backdrop-blur-xl group hover:bg-zinc-900/50 transition-all shadow-xl">
+    <div className="bg-gradient-to-br from-white/10 via-white/5 to-transparent border border-white/10 p-10 rounded-[3.5rem] backdrop-blur-xl group hover:from-emerald-500/20 hover:via-emerald-500/10 hover:border-emerald-500/30 transition-all shadow-xl hover:shadow-2xl hover:shadow-emerald-500/20">
       <div className="flex justify-between items-end mb-8">
         <div>
-          <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">{label}</p>
+          <p className="text-[11px] font-black uppercase text-zinc-500 tracking-widest">{label}</p>
           <p className={`text-5xl font-black italic tracking-tighter tabular-nums leading-none mt-2 ${color}`}>{current}</p>
         </div>
-        <p className="text-[10px] font-black text-zinc-800 uppercase">Target: {target}</p>
+        <p className="text-[10px] font-black text-zinc-600 uppercase">Target: {target}</p>
       </div>
-      <div className="h-2 bg-black/40 rounded-full overflow-hidden">
-        <div className={`h-full transition-all duration-1000 bg-emerald-500`} style={{ width: `${percent}%` }} />
+      <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
+        <div className={`h-full transition-all duration-1000 bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-lg shadow-emerald-500/50`} style={{ width: `${percent}%` }} />
       </div>
     </div>
   );
@@ -892,36 +893,36 @@ const MacroProgressCard: React.FC<{ label: string; current: number; target: numb
 
 // Re-used Nav Button
 const NavButton: React.FC<{ icon: any; active: boolean; onClick: () => void; className?: string }> = ({ icon, active, onClick, className }) => (
-  <button onClick={onClick} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${active ? 'bg-zinc-900 text-emerald-500 shadow-2xl scale-110' : 'text-zinc-800 hover:text-zinc-400'} ${className}`}>
+  <button onClick={onClick} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all backdrop-blur-md ${active ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-black shadow-2xl shadow-emerald-500/50 scale-110' : 'text-zinc-500 bg-white/5 hover:text-emerald-400 hover:bg-white/10 hover:shadow-lg'} ${className}`}>
     {React.cloneElement(icon, { className: 'w-6 h-6' })}
   </button>
 );
 
 const SummaryCard: React.FC<{ label: string; value: string; icon: any }> = ({ label, value, icon }) => (
-  <div className="bg-zinc-900/30 border border-white/5 p-12 rounded-[3.5rem] hover:bg-zinc-900/50 transition-all group backdrop-blur-xl shadow-xl">
-    <div className="p-5 bg-white/5 rounded-2xl w-fit mb-10 group-hover:scale-110 transition-transform">{icon}</div>
+  <div className="bg-gradient-to-br from-white/10 via-white/5 to-transparent border border-white/10 p-12 rounded-[3.5rem] hover:from-emerald-500/20 hover:via-emerald-500/10 hover:to-transparent hover:border-emerald-500/30 transition-all group backdrop-blur-xl shadow-xl hover:shadow-2xl hover:shadow-emerald-500/20">
+    <div className="p-5 bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 rounded-2xl w-fit mb-10 group-hover:scale-110 group-hover:from-emerald-500/40 transition-transform shadow-lg">{icon}</div>
     <p className="text-5xl font-black italic tracking-tighter tabular-nums leading-none">{value}</p>
-    <p className="text-[11px] font-black uppercase text-zinc-600 mt-4 tracking-widest">{label}</p>
+    <p className="text-[11px] font-black uppercase text-zinc-500 mt-4 tracking-widest">{label}</p>
   </div>
 );
 
 const StatMiniRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="flex items-center justify-between py-6 border-b border-white/5 last:border-0">
-    <span className="text-[11px] font-black uppercase tracking-widest text-zinc-700">{label}</span>
-    <span className="text-3xl font-black italic text-emerald-400 font-mono tracking-tighter tabular-nums">{value}</span>
+  <div className="flex items-center justify-between py-6 border-b border-emerald-500/20 last:border-0 hover:bg-emerald-500/5 transition-all px-4 rounded-lg">
+    <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">{label}</span>
+    <span className="text-3xl font-black italic text-emerald-400 font-mono tracking-tighter tabular-nums drop-shadow-lg">{value}</span>
   </div>
 );
 
 const DetailedMusclePath: React.FC<{ name: string; d: string; active: boolean; onClick: () => void }> = ({ name, d, active, onClick }) => (
-  <path d={d} onClick={onClick} filter={active ? "url(#logNeon)" : ""} className={`cursor-pointer transition-all duration-700 outline-none ${active ? 'fill-emerald-500' : 'fill-zinc-800/40 hover:fill-zinc-700'}`} />
+  <path d={d} onClick={onClick} filter={active ? "url(#logNeon)" : ""} className={`cursor-pointer transition-all duration-700 outline-none drop-shadow-lg ${active ? 'fill-emerald-500 drop-shadow-[0_0_20px_rgba(16,185,129,0.8)]' : 'fill-zinc-700/40 hover:fill-zinc-600/60'}`} />
 );
 
 const StepInstruction: React.FC<{ num: string; title: string; text: string }> = ({ num, title, text }) => (
   <div className="flex flex-col items-center gap-4 text-center group">
-    <div className="w-14 h-14 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-black text-xl group-hover:scale-110 group-hover:bg-emerald-500/20 transition-all border border-emerald-500/20">{num}</div>
+    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500/30 to-emerald-500/10 flex items-center justify-center text-emerald-400 font-black text-xl group-hover:scale-110 group-hover:from-emerald-500/50 group-hover:to-emerald-500/20 transition-all border border-emerald-500/40 shadow-lg">{num}</div>
     <div>
-      <p className="text-sm font-black uppercase tracking-widest text-zinc-100">{title}</p>
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mt-1">{text}</p>
+      <p className="text-sm font-black uppercase tracking-widest text-white">{title}</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mt-1">{text}</p>
     </div>
   </div>
 );
