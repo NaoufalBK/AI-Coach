@@ -178,22 +178,27 @@ const App: React.FC = () => {
             if (stablePhase) {
               const currentTime = Date.now();
               
-              // Count rep only when transitioning between different confirmed phases
+              // Count rep only when returning to TOP (completing the rep)
               // AND at least 800ms has passed since last rep
               const isValidTransition = (
-                (confirmedPhaseRef.current === 'bottom' && stablePhase === 'top') ||
-                (confirmedPhaseRef.current === 'top' && stablePhase === 'bottom')
+                confirmedPhaseRef.current === 'bottom' && stablePhase === 'top'
               );
               
               if (isValidTransition && (currentTime - lastRepTimeRef.current) > 800) {
                 lastRepTimeRef.current = currentTime;
                 console.log(`✅ Rep counted: ${confirmedPhaseRef.current} → ${stablePhase}`);
+                
+                // Count rep IMMEDIATELY for instant feedback
+                setRepCount(prev => prev + 1);
+                confirmedPhaseRef.current = stablePhase;
+                
+                // Then analyze biomechanics and provide feedback (async)
                 analyzeBiomechanics(angles, selectedAIExercise).then(fb => {
                   setLastFeedback(fb);
-                  setRepCount(prev => prev + 1);
                   generateCoachSpeech(fb.audioCue);
+                }).catch(err => {
+                  console.error('Biomechanics analysis failed:', err);
                 });
-                confirmedPhaseRef.current = stablePhase;
               } else if (confirmedPhaseRef.current !== stablePhase) {
                 // Update confirmed phase without counting rep (first position or same direction)
                 console.log(`📍 Phase locked: ${stablePhase}`);
