@@ -93,6 +93,7 @@ const App: React.FC = () => {
   const [repCount, setRepCount] = useState(0);
   const [lastFeedback, setLastFeedback] = useState<CoachingFeedback | null>(null);
   const [currentAngles, setCurrentAngles] = useState<JointAngles | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -105,9 +106,15 @@ const App: React.FC = () => {
   // Update the ref whenever dependencies change
   useEffect(() => {
     processPoseRef.current = (results: any) => {
-      if (!canvasRef.current) return;
+      if (!canvasRef.current) {
+        console.warn('Canvas ref not available');
+        return;
+      }
       const ctx = canvasRef.current.getContext('2d');
-      if (!ctx) return;
+      if (!ctx) {
+        console.warn('Canvas context not available');
+        return;
+      }
       const { width, height } = canvasRef.current;
       
       ctx.save();
@@ -158,37 +165,63 @@ const App: React.FC = () => {
     };
   }, [isPositioning, isAIActive, selectedAIExercise, positionScore]);
 
-  // MediaPipe Initialization
+  // MediaPipe Initialization - only when video element exists
   useEffect(() => {
     if (activeSection !== 'ai-coach') return;
+    if (!isPositioning && !isAIActive) return; // Wait until we need the camera
+    
     let camera: any = null;
     let pose: any = null;
 
     const setup = async () => {
-      const MP = (window as any);
-      if (!MP.Pose || !MP.Camera || !videoRef.current) return;
-      pose = new MP.Pose({ locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
-      pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-      
-      // We call the REF here to ensure the logic inside is always fresh
-      pose.onResults((results: any) => processPoseRef.current(results));
-      
-      camera = new MP.Camera(videoRef.current, { 
-        onFrame: async () => {
-          if (pose) await pose.send({ image: videoRef.current });
-        }, 
-        width: 1280, 
-        height: 720 
-      });
-      await camera.start();
+      try {
+        setCameraError(null);
+        const MP = (window as any);
+        if (!MP.Pose || !MP.Camera) {
+          setCameraError('MediaPipe libraries not loaded. Please refresh the page.');
+          return;
+        }
+        
+        // Wait for video element to be in DOM
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (!videoRef.current) {
+          console.error('Video ref still null after delay');
+          setCameraError('Video element not found. Please try again.');
+          return;
+        }
+        
+        pose = new MP.Pose({ locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
+        pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+        
+        // We call the REF here to ensure the logic inside is always fresh
+        pose.onResults((results: any) => processPoseRef.current(results));
+        
+        camera = new MP.Camera(videoRef.current, { 
+          onFrame: async () => {
+            if (pose && videoRef.current && videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0) {
+              await pose.send({ image: videoRef.current });
+            }
+          }, 
+          width: 1280, 
+          height: 720 
+        });
+        await camera.start();
+        console.log('Camera and pose detection initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize camera/pose:', error);
+        setCameraError('Failed to access camera. Please allow camera permissions.');
+      }
     };
+    
     setup();
+    
     return () => { 
       if (camera) camera.stop(); 
       if (pose) pose.close(); 
       stopCoachSpeech(); 
     };
-  }, [activeSection]);
+  }, [activeSection, isPositioning, isAIActive]);
 
   // Handle auto-start trigger for AI Coach
   useEffect(() => {
@@ -336,6 +369,8 @@ const App: React.FC = () => {
     setRepCount(0); 
     setLastFeedback(null); 
     setCountdown(null);
+    setCameraError(null);
+    hipHistoryRef.current = [];
   };
 
   return (
@@ -621,9 +656,17 @@ const App: React.FC = () => {
                 </div>
               </div>
             ) : isPositioning ? (
-              <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-                <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover grayscale opacity-30" playsInline muted />
-                <canvas ref={canvasRef} width={1280} height={720} className="absolute inset-0 w-full h-full object-cover" />
+              <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-black">
+                {cameraError ? (
+                  <div className="text-center space-y-6 p-12 bg-red-500/10 border border-red-500/40 rounded-[4rem] max-w-2xl">
+                    <h3 className="text-3xl font-black text-red-500 uppercase">Camera Error</h3>
+                    <p className="text-zinc-300">{cameraError}</p>
+                    <button onClick={() => window.location.reload()} className="px-8 py-4 bg-zinc-900 rounded-full font-black uppercase text-xs tracking-widest hover:bg-zinc-800">Reload Page</button>
+                  </div>
+                ) : (
+                  <>
+                    <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover grayscale opacity-30" playsInline muted autoPlay />
+                    <canvas ref={canvasRef} width={1280} height={720} className="absolute inset-0 w-full h-full object-cover" />
                 
                 <div className="absolute top-12 left-12 flex items-center gap-6 bg-black/60 px-8 py-5 rounded-full border border-white/10 backdrop-blur-2xl">
                    <div className="w-4 h-4 rounded-full bg-emerald-500 animate-pulse" />
@@ -643,11 +686,14 @@ const App: React.FC = () => {
                    {countdown !== null && <div className="text-[10rem] font-black italic text-emerald-500 animate-pulse leading-none">{countdown}</div>}
                    <button onClick={endSession} className="w-full py-6 bg-zinc-900 hover:bg-red-500/20 text-red-500 rounded-[2rem] font-black uppercase text-[10px] tracking-widest transition-all">TERMINATE SYNC</button>
                 </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className="w-full h-full flex flex-col md:flex-row gap-12 p-12 opacity-0 animate-[fadeIn_0.5s_ease-in_forwards]">
                  <div className="flex-1 relative bg-zinc-950 rounded-[5rem] border border-white/5 overflow-hidden shadow-2xl group">
-                    <video ref={videoRef} className="hidden" playsInline muted />
+                    {/* Video must remain in DOM for MediaPipe but visually hidden behind canvas */}
+                    <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0, pointerEvents: 'none' }} playsInline muted autoPlay />
                     <canvas ref={canvasRef} width={1280} height={720} className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute top-12 left-12 flex flex-col gap-4">
                        <div className="px-10 py-5 bg-black/80 border border-white/10 rounded-full flex items-center gap-6 backdrop-blur-2xl">
@@ -693,8 +739,8 @@ const App: React.FC = () => {
              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                 <div className="lg:col-span-8 bg-zinc-900/30 border border-white/5 p-12 rounded-[4.5rem] backdrop-blur-xl shadow-2xl">
                    <div className="grid grid-cols-7 gap-5">
-                      {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-                        <div key={d} className="text-center text-[10px] font-black uppercase tracking-widest text-zinc-800 pb-6">{d}</div>
+                      {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, idx) => (
+                        <div key={`day-${idx}`} className="text-center text-[10px] font-black uppercase tracking-widest text-zinc-800 pb-6">{d}</div>
                       ))}
                       {Array.from({ length: 31 }).map((_, i) => {
                         const day = i + 1;
