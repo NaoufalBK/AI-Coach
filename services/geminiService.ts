@@ -4,6 +4,16 @@ import { JointAngles, CoachingFeedback, ExerciseType, Macronutrients, UserProfil
 
 let activeSources: AudioBufferSourceNode[] = [];
 let audioCtx: AudioContext | null = null;
+let voicesLoaded = false;
+
+// Ensure voices are loaded for Web Speech API fallback
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    voicesLoaded = true;
+  };
+  // Trigger initial load
+  window.speechSynthesis.getVoices();
+}
 
 function decode(base64: string) {
   const binaryString = atob(base64);
@@ -86,24 +96,77 @@ export const generateCoachSpeech = async (text: string): Promise<void> => {
       contents: [{ parts: [{ text: `Say clearly: ${text}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
-        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
+        speechConfig: { 
+          voiceConfig: { 
+            prebuiltVoiceConfig: { 
+              voiceName: 'Puck' 
+            } 
+          } 
+        },
       },
     });
+    
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (base64Audio) {
-      if (!audioCtx || audioCtx.state === 'closed') {
-        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-      }
-      const audioBuffer = await decodeAudioData(decode(base64Audio), audioCtx, 24000, 1);
-      const source = audioCtx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioCtx.destination);
-      activeSources.push(source);
-      source.start();
+    
+    if (!base64Audio) {
+      console.warn('No audio data received from Gemini TTS, using fallback');
+      throw new Error('No audio data');
     }
+    
+    // Initialize or reuse audio context
+    if (!audioCtx || audioCtx.state === 'closed') {
+      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    }
+    
+    const audioBuffer = await decodeAudioData(decode(base64Audio), audioCtx, 24000, 1);
+    const source = audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioCtx.destination);
+    activeSources.push(source);
+    source.start();
+    
+    console.log('Gemini TTS played successfully');
+    
   } catch (error) {
+    console.error('Gemini TTS failed, using browser fallback:', error);
+    
+    // Use Web Speech API as fallback with consistent voice
     const utterance = new SpeechSynthesisUtterance(text);
-    window.speechSynthesis.speak(utterance);
+    
+    // Wait for voices to load if not already loaded
+    const selectVoice = () => {
+      const voices = window.speechSynthesis.getVoices();
+      
+      // Try to find a consistent male voice
+      const preferredVoice = voices.find(v => 
+        v.name.includes('Male') || 
+        v.name.includes('male') || 
+        v.name.includes('David') ||
+        v.name.includes('Daniel') ||
+        v.name.includes('Mark')
+      ) || voices.find(v => v.lang.startsWith('en')) || voices[0];
+      
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+        console.log('Using fallback voice:', preferredVoice.name);
+      }
+      
+      utterance.rate = 1.0;
+      utterance.pitch = 0.9; // Slightly lower for coaching tone
+      utterance.volume = 1.0;
+      
+      window.speechSynthesis.speak(utterance);
+    };
+    
+    if (voicesLoaded || window.speechSynthesis.getVoices().length > 0) {
+      selectVoice();
+    } else {
+      // Wait for voices to load
+      window.speechSynthesis.onvoiceschanged = () => {
+        selectVoice();
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+    }
   }
 };
 

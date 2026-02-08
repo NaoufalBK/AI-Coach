@@ -99,6 +99,10 @@ const App: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hipHistoryRef = useRef<number[]>([]);
   const autoStartTimerRef = useRef<number | null>(null);
+  const lastPhaseRef = useRef<string>('standing');
+  const lastRepTimeRef = useRef<number>(0);
+  const phaseHistoryRef = useRef<string[]>([]); // Track recent phases for stability
+  const confirmedPhaseRef = useRef<string>('standing'); // Only confirmed stable phases
 
   // CRITICAL: We use a Ref to store the latest process function to avoid stale closures in the MediaPipe loop
   const processPoseRef = useRef<(results: any) => void>(() => {});
@@ -151,13 +155,51 @@ const App: React.FC = () => {
           const hipY = (landmarks[23].y + landmarks[24].y) / 2;
           hipHistoryRef.current.push(hipY);
           if (hipHistoryRef.current.length > 30) hipHistoryRef.current.shift();
-          const phase = detectExercisePhase(landmarks, hipHistoryRef.current, selectedAIExercise);
-          if (phase === 'bottom' || phase === 'top') {
-            analyzeBiomechanics(angles, selectedAIExercise).then(fb => {
-              setLastFeedback(fb);
-              setRepCount(prev => prev + 1);
-              generateCoachSpeech(fb.audioCue);
-            });
+          
+          const detectedPhase = detectExercisePhase(landmarks, hipHistoryRef.current, selectedAIExercise);
+          
+          // Add to phase history for stability check (shorter buffer)
+          phaseHistoryRef.current.push(detectedPhase);
+          if (phaseHistoryRef.current.length > 6) phaseHistoryRef.current.shift();
+          
+          // Only confirm phase if it's been consistent for at least 3 out of last 5 frames
+          if (phaseHistoryRef.current.length >= 4) {
+            const recentPhases = phaseHistoryRef.current.slice(-5);
+            const phaseCount: { [key: string]: number } = {};
+            recentPhases.forEach(p => phaseCount[p] = (phaseCount[p] || 0) + 1);
+            
+            // Find most common phase among key positions
+            const keyPhases = Object.entries(phaseCount)
+              .filter(([phase, _]) => phase === 'top' || phase === 'bottom');
+            
+            // Check if we have a stable key phase (top or bottom)
+            const stablePhase = keyPhases.find(([_, count]) => count >= 3)?.[0];
+            
+            if (stablePhase) {
+              const currentTime = Date.now();
+              
+              // Count rep only when transitioning between different confirmed phases
+              // AND at least 800ms has passed since last rep
+              const isValidTransition = (
+                (confirmedPhaseRef.current === 'bottom' && stablePhase === 'top') ||
+                (confirmedPhaseRef.current === 'top' && stablePhase === 'bottom')
+              );
+              
+              if (isValidTransition && (currentTime - lastRepTimeRef.current) > 800) {
+                lastRepTimeRef.current = currentTime;
+                console.log(`✅ Rep counted: ${confirmedPhaseRef.current} → ${stablePhase}`);
+                analyzeBiomechanics(angles, selectedAIExercise).then(fb => {
+                  setLastFeedback(fb);
+                  setRepCount(prev => prev + 1);
+                  generateCoachSpeech(fb.audioCue);
+                });
+                confirmedPhaseRef.current = stablePhase;
+              } else if (confirmedPhaseRef.current !== stablePhase) {
+                // Update confirmed phase without counting rep (first position or same direction)
+                console.log(`📍 Phase locked: ${stablePhase}`);
+                confirmedPhaseRef.current = stablePhase;
+              }
+            }
           }
         }
       }
@@ -371,6 +413,10 @@ const App: React.FC = () => {
     setCountdown(null);
     setCameraError(null);
     hipHistoryRef.current = [];
+    lastPhaseRef.current = 'standing';
+    lastRepTimeRef.current = 0;
+    phaseHistoryRef.current = [];
+    confirmedPhaseRef.current = 'standing';
   };
 
   return (

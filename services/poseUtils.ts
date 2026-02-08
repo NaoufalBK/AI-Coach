@@ -48,8 +48,17 @@ export const detectExercisePhase = (
     case ExerciseType.SQUAT:
     case ExerciseType.DEADLIFT:
       const hipY = (landmarks[23].y + landmarks[24].y) / 2;
-      if (Math.abs(avgVelocity) < 0.001 && hipY > 0.65) return 'bottom';
-      return avgVelocity > 0.002 ? 'descending' : 'ascending';
+      const kneeAngle = (calculateAngle(landmarks[23], landmarks[25], landmarks[27]) + 
+                        calculateAngle(landmarks[24], landmarks[26], landmarks[28])) / 2;
+      
+      // Bottom position: hips are high and knees bent significantly
+      if (hipY > 0.58 && kneeAngle < 115) return 'bottom';
+      
+      // Top position: hips are low and knees mostly straight
+      if (hipY < 0.50 && kneeAngle > 155) return 'top';
+      
+      // Movement phases based on velocity
+      return avgVelocity > 0.004 ? 'descending' : avgVelocity < -0.004 ? 'ascending' : 'standing';
     
     case ExerciseType.KNEE_ELEVATION:
       const kneeY = (landmarks[25].y + landmarks[26].y) / 2;
