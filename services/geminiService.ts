@@ -5,6 +5,27 @@ import { JointAngles, CoachingFeedback, ExerciseType, Macronutrients, UserProfil
 let activeSources: AudioBufferSourceNode[] = [];
 let audioCtx: AudioContext | null = null;
 let voicesLoaded = false;
+let protocolAborted = false;
+
+export const setProtocolAborted = (v: boolean) => {
+  protocolAborted = v;
+  if (v) {
+    // aggressively stop any playing audio when abort is set
+    try {
+      activeSources.forEach(s => { try { s.stop(); s.disconnect(); } catch {} });
+    } catch (e) {}
+    activeSources = [];
+    if (audioCtx && audioCtx.state !== 'closed') {
+      audioCtx.close();
+      audioCtx = null;
+    }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }
+};
+
+export const isProtocolAborted = () => protocolAborted;
 
 // Ensure voices are loaded for Web Speech API fallback
 if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -62,27 +83,58 @@ export const stopCoachSpeech = () => {
 export const analyzeBiomechanics = async (angles: JointAngles, exercise: ExerciseType): Promise<CoachingFeedback> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const exerciseContext = `Exercise: ${exercise}. Knee Flex: ${angles.leftKnee}, Hip: ${angles.leftHip}, Back: ${angles.backAngle}`;
-  const prompt = `You are an elite biomechanics coach. Analysis context: ${exerciseContext}. Return JSON with status (excellent/warning/critical), message, audioCue, and focusJoints.`;
-
+  const model = process.env.MODEL || "models/gemma-3-27b-it";
+  
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            status: { type: Type.STRING, enum: ['excellent', 'warning', 'critical'] },
-            message: { type: Type.STRING },
-            audioCue: { type: Type.STRING },
-            focusJoints: { type: Type.ARRAY, items: { type: Type.STRING } }
-          },
-          required: ['status', 'message', 'audioCue', 'focusJoints']
+    if (model.includes('gemini') || model.includes('flash')) {
+      // Gemini JSON mode - comprehensive coaching prompt
+      const prompt = `You are an elite biomechanics coach analyzing real-time exercise form. 
+      
+Context: ${exerciseContext}
+
+Provide detailed biomechanical analysis with:
+- Status: excellent (perfect form), warning (minor issues), or critical (safety concerns)
+- Message: Specific technical feedback on form and technique
+- AudioCue: Short, actionable verbal cue for immediate correction
+- FocusJoints: Array of body parts needing attention
+
+Return JSON with status, message, audioCue, and focusJoints.`;
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              status: { type: Type.STRING, enum: ['excellent', 'warning', 'critical'] },
+              message: { type: Type.STRING },
+              audioCue: { type: Type.STRING },
+              focusJoints: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ['status', 'message', 'audioCue', 'focusJoints']
+          }
         }
-      }
-    });
-    return JSON.parse(response.text || '{}') as CoachingFeedback;
+      });
+      return JSON.parse(response.text || '{}') as CoachingFeedback;
+    } else {
+      // Gemma text mode
+      const prompt = `You are a biomechanics expert. Analyze this posture:
+                      ${exerciseContext}
+                      
+                      Provide a brief coaching tip in one sentence.`;
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt
+      });
+      const message = response.text?.trim() || "Focus on control.";
+      return { 
+        status: 'warning', 
+        message: message, 
+        audioCue: message, 
+        focusJoints: ['knees'] 
+      } as CoachingFeedback;
+    }
   } catch (error) {
     return { status: 'warning', message: "Focus on control.", audioCue: "Stay strong.", focusJoints: [] };
   }
@@ -90,83 +142,15 @@ export const analyzeBiomechanics = async (angles: JointAngles, exercise: Exercis
 
 export const generateCoachSpeech = async (text: string): Promise<void> => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: `Say clearly: ${text}` }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: { 
-          voiceConfig: { 
-            prebuiltVoiceConfig: { 
-              voiceName: 'Puck' 
-            } 
-          } 
-        },
-      },
-    });
-    
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    
-    if (!base64Audio) {
-      console.warn('No audio data received from Gemini TTS, using fallback');
-      throw new Error('No audio data');
-    }
-    
-    // Initialize or reuse audio context
-    if (!audioCtx || audioCtx.state === 'closed') {
-      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-    }
-    
-    const audioBuffer = await decodeAudioData(decode(base64Audio), audioCtx, 24000, 1);
-    const source = audioCtx.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(audioCtx.destination);
-    activeSources.push(source);
-    source.start();
-    
-    console.log('Gemini TTS played successfully');
-    
-  } catch (error) {
-    console.error('Gemini TTS failed, using browser fallback:', error);
-    
-    // Use Web Speech API as fallback with consistent voice
+    if (protocolAborted) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Wait for voices to load if not already loaded
-    const selectVoice = () => {
-      const voices = window.speechSynthesis.getVoices();
-      
-      // Try to find a consistent male voice
-      const preferredVoice = voices.find(v => 
-        v.name.includes('Male') || 
-        v.name.includes('male') || 
-        v.name.includes('David') ||
-        v.name.includes('Daniel') ||
-        v.name.includes('Mark')
-      ) || voices.find(v => v.lang.startsWith('en')) || voices[0];
-      
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-        console.log('Using fallback voice:', preferredVoice.name);
-      }
-      
-      utterance.rate = 1.0;
-      utterance.pitch = 0.9; // Slightly lower for coaching tone
-      utterance.volume = 1.0;
-      
-      window.speechSynthesis.speak(utterance);
-    };
-    
-    if (voicesLoaded || window.speechSynthesis.getVoices().length > 0) {
-      selectVoice();
-    } else {
-      // Wait for voices to load
-      window.speechSynthesis.onvoiceschanged = () => {
-        selectVoice();
-        window.speechSynthesis.onvoiceschanged = null;
-      };
-    }
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => v.lang && v.lang.startsWith('en')) || voices[0];
+    if (preferredVoice) utterance.voice = preferredVoice;
+    utterance.rate = 1.0; utterance.pitch = 0.9; utterance.volume = 1.0;
+    window.speechSynthesis.speak(utterance);
+  } catch (error) {
+    console.error('Browser TTS failed:', error);
   }
 };
 
@@ -204,25 +188,49 @@ export const analyzeNutrition = async (description: string): Promise<Macronutrie
 // Assistant to calculate TDEE and initial goals
 export const calculateUserGoals = async (profile: Omit<UserProfile, 'calorieGoal' | 'proteinGoal'>): Promise<{ calorieGoal: number, proteinGoal: number }> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const prompt = `Act as a professional nutritionist. Calculate TDEE and daily macro goals for a ${profile.age}yo ${profile.gender}, weight ${profile.weight}kg, height ${profile.height}cm, activity level: ${profile.activityLevel}. Goal: ${profile.goal}. Return only JSON with calorieGoal and proteinGoal.`;
+  const model = process.env.MODEL || "models/gemma-3-27b-it";
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            calorieGoal: { type: Type.NUMBER },
-            proteinGoal: { type: Type.NUMBER }
-          },
-          required: ['calorieGoal', 'proteinGoal']
+    if (model.includes('gemini') || model.includes('flash')) {
+      // Gemini JSON mode
+      const prompt = `Act as a professional nutritionist. Calculate TDEE and daily macro goals for a ${profile.age}yo ${profile.gender}, weight ${profile.weight}kg, height ${profile.height}cm, activity level: ${profile.activityLevel}. Goal: ${profile.goal}. Return only JSON with calorieGoal and proteinGoal.`;
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              calorieGoal: { type: Type.NUMBER },
+              proteinGoal: { type: Type.NUMBER }
+            },
+            required: ['calorieGoal', 'proteinGoal']
+          }
         }
+      });
+      return JSON.parse(response.text || '{}');
+    } else {
+      // Gemma text mode
+      const prompt = `You are a professional nutritionist. Calculate daily calorie and protein goals:
+                      Age: ${profile.age}, Gender: ${profile.gender}, Weight: ${profile.weight}kg, Height: ${profile.height}cm
+                      Activity: ${profile.activityLevel}, Goal: ${profile.goal}
+                      
+                      Respond with just two numbers: calories and protein grams.`;
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt
+      });
+      const text = response.text || '';
+      const numbers = text.match(/\d+/g);
+      if (numbers && numbers.length >= 2) {
+        return {
+          calorieGoal: parseInt(numbers[0]),
+          proteinGoal: parseInt(numbers[1])
+        };
       }
-    });
-    return JSON.parse(response.text || '{}');
+      throw new Error('Could not parse numbers from response');
+    }
   } catch (error) {
     console.error("Goal Calculation Error:", error);
     // Fallback: simple estimation
